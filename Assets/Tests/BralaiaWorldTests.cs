@@ -1,5 +1,5 @@
+using System.Collections.Generic;
 using NUnit.Framework;
-using UnityEngine;
 
 namespace Bralaia.Tests
 {
@@ -43,16 +43,47 @@ namespace Bralaia.Tests
         }
 
         [Test]
+        public void InvalidSaveDoesNotChangeCampaign()
+        {
+            var world = new BralaiaWorld();
+            int originalTreasury = world.Treasury;
+            Assert.That(world.LoadFromJson("not json"), Is.False);
+            Assert.That(world.LoadFromJson("{}"), Is.False);
+            Assert.That(world.Treasury, Is.EqualTo(originalTreasury));
+        }
+
+        [Test]
         public void AttackRequiresWarAndAdjacentPlayerRegion()
         {
             var world = new BralaiaWorld();
             var target = world.GetRegion("north");
-            int targetOwnerBefore = world.CountOwned("اتحاد السهوب");
+            int originalArmy = target.Army;
             world.Attack(target);
-            Assert.That(world.CountOwned("اتحاد السهوب"), Is.EqualTo(targetOwnerBefore));
+            Assert.That(target.Army, Is.EqualTo(originalArmy));
+            Assert.That(world.IsAtWar("اتحاد السهوب"), Is.False);
             world.DeclareWar(target);
+            Assert.That(world.IsAtWar("اتحاد السهوب"), Is.True);
             world.Attack(target);
             Assert.That(world.EventLog.Count, Is.GreaterThan(0));
+        }
+
+        [Test]
+        public void PeaceOfferOutsideWarDoesNotCreateWar()
+        {
+            var world = new BralaiaWorld();
+            world.OfferPeace("ممالك الساحل");
+            Assert.That(world.IsAtWar("ممالك الساحل"), Is.False);
+        }
+
+        [Test]
+        public void NextTurnAdvancesEconomyAndAi()
+        {
+            var world = new BralaiaWorld();
+            int oldTurn = world.Turn;
+            int oldTreasury = world.Treasury;
+            world.NextTurn();
+            Assert.That(world.Turn, Is.EqualTo(oldTurn + 1));
+            Assert.That(world.Treasury, Is.GreaterThan(oldTreasury));
         }
     }
 }
